@@ -1,0 +1,147 @@
+---
+title: "Intermediate R"
+author: "Amanda Bayless"
+date: "January 17, 2018"
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(root.dir="~/Graduate Program/Applied Quantitative Methods/homework/Homework Intermediate R")
+```
+
+##Question 1.
+The output of the loop is a matrix with calculated averages of each trait for each species.
+
+##Question 2. 
+(Pseudo-code below)
+```{r}
+data("iris")
+head(iris)
+
+sp_ids = unique(iris$Species)
+#unique() Calls out individual species - setosa, versicolor, virginica
+
+output = matrix(0, nrow=length(sp_ids), ncol=ncol(iris)-1)
+#Output is the name of the matrix function and the matrix is calling the number of rows to be the same as number of unique species and the number of columns to be the same as the iris data minus one column (which one is to be assigned in a later line)
+rownames(output) = sp_ids
+#The row names for the matrix/object are assigned as the species names already assigned in the iris data set. We created sp_ids earlier, so we could easily call one of each unique species.
+colnames(output) = names(iris[ , -ncol(iris)])
+#The column names for the matrix are the names of the columns in the iris data minus the last column
+
+for(i in seq_along(sp_ids)) {
+#i is the iterative for the species and seq_along is making the species as an integer vector or the sequential species as numbers. Now each species has the value i.
+    iris_sp = subset(iris, subset=Species == sp_ids[i], select=-Species)
+    #The name iris_sp is assigned to a subset of data (new dataframe) for each seperate species and the 
+    #species column in removed from the dataframe
+    for(j in 1:(ncol(iris_sp))) {
+    #j is the iterative for the values 1 through the number of columns in the subset just assigned to
+    #iris_sp.The columns in this subet are now all termed j.
+        x = 0
+        y = 0
+        #x and y are set to equal 0
+        if (nrow(iris_sp) > 0) {
+        #If the number of rows in the iris_sp subset is greater than 0, run the following loop.
+            for(k in 1:nrow(iris_sp)) {
+            #k is assigned as the iterative for a vector of 1 through the number of rows in the iris_sp
+            #subset (1:50)
+            #By running the function print(paste('y=' ,y)), we know that y = 50.
+                x = x + iris_sp[k, j]
+                #x is set to equal the sum of each variable in iris_sp 
+                y = y + 1
+                #y is set to equal y + 1 
+            }
+            output[i, j] = x / y 
+            #The output will result in a matrix of x/y which equals the averages of the variables for each              species
+        }
+    }
+}
+output
+```
+   
+
+##Question 3.
+x could be termed sum_variable
+y could be termed length_rows or number_rows
+output could be mean_values
+
+##Question 4. 
+Take out k loop
+```{r}
+data(iris)
+head(iris)
+
+sp_ids = unique(iris$Species)
+
+output = matrix(0, nrow=length(sp_ids), ncol=ncol(iris)-1)
+rownames(output) = sp_ids
+colnames(output) = names(iris[ , -ncol(iris)])
+
+for(i in seq_along(sp_ids)) {
+    iris_sp = subset(iris, subset=Species == sp_ids[i], select=-Species)
+    for(j in 1:(ncol(iris_sp))) {
+        if (nrow(iris_sp) > 0) {
+        x = mean(iris_sp[, j])
+            }
+            output[i, j] = x 
+        }
+    }
+output
+```
+
+##Question 5.
+```{r}
+x <- c(1:10)
+y <- vector("numeric", 10)
+for (h in x){
+  y[h] <- sum(1:h)
+}
+y
+```
+
+
+##Question 6.
+```{r}
+x <- c(1:10)
+y <- vector("numeric", 10)
+for (h in x){
+    y[h] <- sum(1:h)
+    if (y[h] > 10){
+        print("NA")
+        }
+    else{
+        print (y[h])
+    }
+}
+```
+
+##Question 7.
+```{r}
+x <- c(1:5)
+sum_vector <- function (x){
+y <- NULL
+    for (h in x){
+        y[h] <- sum(1:h)
+        }
+        print(y)
+}
+sum_vector(x)
+```
+
+##NOTES
+```{r}
+my_sum = 0
+for (i in 1:10) {
+  my_sum = my_sum + i
+  print(my_sum)
+}
+```
+
+```{r}
+for (i in c('a','b','c')) {
+  print(i)
+}
+```
