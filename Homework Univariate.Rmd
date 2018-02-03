@@ -1,0 +1,123 @@
+---
+title: "Univariate HW"
+author: "Amanda Bayless"
+date: "January 28, 2018"
+output: html_document
+---
+
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(root.dir="~/Graduate Program/Applied Quantitative Methods/homework/Homework Univariate")
+```
+
+```{r, results='hide'}
+trees = read.csv("treedata_subset.csv")
+trees
+trees_Abies <- trees[trees$species == "Abies fraseri",]
+trees_Acer <- trees[trees$species == "Acer rubrum",]
+```
+
+```{r}
+pairs(trees_Abies[ , -c(1,2,3)], lower.panel = panel.smooth)
+
+pairs(trees_Acer[ , -c(1,2,3)], lower.panel = panel.smooth)
+```
+
+
+#Question 1. Carry out an exploratory analysis using the tree dataset. Develop and compare models for species cover for a habitat generalist Acer rubrum (Red maple) and a habitat specialist Abies fraseri (Frasier fir).
+```{r, results = 'hide'}
+library(car)
+```
+```{r}
+
+abies_ols <- lm(trees_Abies$cover ~ trees_Abies$elev +  trees_Abies$tci + trees_Abies$streamdist + trees_Abies$disturb + trees_Abies$beers)
+summary(abies_ols)
+Anova(abies_ols, type = 3)
+
+acer_ols <- lm(trees_Acer$cover ~ trees_Acer$elev + trees_Acer$tci + trees_Acer$streamdist + trees_Acer$disturb + trees_Acer$beers)
+summary(acer_ols)
+Anova(acer_ols, type = 3)
+```
+The Anova and summary functions provide the same p-values except for the variable disturbance. Using the summary function causes disturbance to be split into three different categories. Anova just examines the overall significance of disturbance. 
+
+**Questions:** 
+
+* **How well does the exploratory model appear to explain cover?**
+
+The exploratory model appears appears to do a pretty good job explaining the variables correlated with cover. After eliminating certain variables and examining interactions, the variables in the exploratory model remain the most important if trying to attain the simplest model. 
+ 
+* **Which explanatory variables are the most important?**
+
+For Abies elevation is the most important variable and for Acer the most important variables are elevation, stream distance and beers. 
+ 
+ * **Do model diagnostics indicate any problems with violations of OLS assumptions?**
+ 
+By observing the diagnostics plots for the linear model, we see that multiple assumptions are violated.
+1. Non-equal variance of residuals for Acer species: shown by heteroscedasticity in residuals vs fitted plot. 
+2. The residuals appear to be somewhat non-normal (mainly for Abies species), but it could be debated if it violates the normality of residuals assumption: Shown in Normal Q-Q plot.
+ 
+ * **Are you able to explain variance in one species better than another, why might this be the case?**
+ 
+The explained variance was calculated using the psuedo-r-squared statistic and it showed that variance was better explained in the Abies species. This may be the case because cover is only significantly caused by elevation (1 variable) while Acer species has 3 variables showing they are correlated with cover. There may also be variables interacting with one another preventing the model from being able to account for variation as well as Abies. 
+
+```{r}
+Abies_ols2 <- lm(cover ~ elev, data = trees_Abies)
+summary(Abies_ols2)
+Anova(Abies_ols2, type = 3)
+mean(Abies_ols2$residuals)
+
+Acer_ols2 <- lm(cover ~ elev + streamdist + beers, data = trees_Acer)
+summary(Acer_ols2)
+Anova(Acer_ols2, type = 3)
+mean(Acer_ols2$residuals)
+```
+
+```{r}
+par(mfrow=c(2,2))
+plot(Abies_ols2)
+
+par(mfrow=c(2,2))
+plot(Acer_ols2)
+```
+
+
+```{r}
+abies_glm <- glm(cover ~ elev, data= trees_Abies, family='poisson')
+summary(abies_glm)
+```
+
+```{r}
+acer_glm <- glm(cover ~ elev+streamdist+beers, data= trees_Acer, family='poisson')
+summary(acer_glm)
+```
+
+Assesssing degress of variation using pseudo-R-squared statistic: This shows the explained deviance is greater with the Abies species. 
+```{r}
+pseudo_r2_Abies <- 1 - 16.13/41.27
+pseudo_r2_Abies
+```
+
+```{r}
+pseudo_r2_Acer <- 1 - 623.4/649.3
+pseudo_r2_Acer
+```
+
+#Question 2. 
+Compare the residual sums of squares between the traditional OLS and glm models.
+Does it appear that changing the error distribution changed the results much? In what ways? 
+```{r}
+anova(Abies_ols2,abies_glm)
+```
+There are 93 more points of deviance in the ols model, so the glm model is better for Abies
+
+```{r}
+anova(Acer_ols2, acer_glm)
+```
+Again, the glm model is much better because there are 2223 more points of deviance in the OLS model. 
+
+#Question 3. Provide in plain English what you have found...
+
+It is certainly more robust to use the GLM model because we are limiting our variance; however, both models showed us which variables were the most important in explaining cover. Thus, either model could be used for a quick examination of significance, but GLM is a more correct model and the OLS model violates assumptions for a linear model. 
+
+
+
