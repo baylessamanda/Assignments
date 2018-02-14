@@ -1,0 +1,130 @@
+---
+title: "Multivariate HW"
+author: "Amanda Bayless"
+date: "February 8, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(root.dir="~/Graduate Program/Applied Quantitative Methods/Assignments/Homework Multivariate")
+```
+
+```{r, results = 'hide'}
+library(vegan)
+library(dummies)
+data(dune)
+data(dune.env)
+?dune
+dune #y matrix
+dune.env #response matrix 
+```
+
+#Question 1.
+Conduct an indirect ordination on the dune plant community. Specifically, visually examine a NMDS plot using the bray-curtis distance metric. Below is some code to help you develop a potential plot that emphasizes the role of the environmental variable "Moisture".
+```{r}
+dune_mds <- metaMDS(dune)
+```
+Stress is number used to assess optimal fit. 
+
+```{r}
+ plot(dune_mds, type='n')
+ text(dune_mds, 'sp', cex=.5)
+ # generate vector of colors 
+ color_vect = rev(terrain.colors(6))[-1]
+ points(dune_mds, 'sites', pch=19, 
+        col=color_vect[dune.env$Moisture])
+ legend('topright', paste("Moisture =", 1:5, sep=''), 
+        col=color_vect, pch=19)
+```
+
+#Describe how you interpret the graphic. What is the goal of creating such a plot? Does this analysis suggest any interesting findings with respect to the dune vegetation?
+
+The dominate axis of variation appears to have something to do with moisture (Note: Can test using an approach called mrpp). This plot reveals if there is a pattern within the data that is associated with one of the measured variables. In this case we discover which plants are more dependent on moisture for growth/existance. 
+
+#Quesiton 2.
+
+Carry out a direct ordination using CCA in order to test any potential hypotheses that you developed after examining the MDS plot. Specifically, carry out a test of the entire model (i.e., including all constrained axes) and also carry out tests at the scale of individual explanatory variables you included in your model if you included more than one variable. Plot your results.
+
+```{r}
+Moisture <- as.integer(dune.env$Moisture)
+Manure <- as.integer(dune.env$Manure)
+Use <- dune.env$Use
+Management <- dune.env$Management
+A1 <- dune.env$A1
+cca_dune <- cca(dune ~ A1 + Moisture + Manure + Use + Management)
+cca_dune
+RsquareAdj(cca_dune, 10)
+```
+The r squared and adjusted r squared are very different. This means we probably need to remove some of the variables for a better model and potentially greater significance from variables. 
+
+```{r}
+plot(cca_dune, type='n', scaling=1)
+orditorp(cca_dune, display='sp', cex=0.5, scaling=1, col='blue')
+text(cca_dune, display='bp', col='red')
+```
+
+Moisture appears to be one of the variable that explains the most varience, since it is associated with the x axis, followed by A1 and Management.
+
+```{r}
+anova(cca_dune, permutations = 1000)
+anova(cca_dune, by='margin', permutations = 1000)
+```
+
+```{r}
+Use <- dummy(dune.env$Use)
+Management <-dummy(dune.env$Management)
+
+cca_dune2 <- cca(dune ~ A1 + Moisture + Management + Manure, data = dune.env)
+RsquareAdj(cca_dune2, 1000)
+cca_dune8 <- cca(dune ~ A1 + Moisture + Manure, data = dune.env)
+RsquareAdj(cca_dune8, 1000)
+```
+The variables Use and Management make the adjusted r squared worse and the difference greater between the adjusted r squared and r squared, so I removed those variables. Removing moisture makes the difference between the r squared and adjusted r squared much smaller, but it does slightly lower the adjusted r squared. Removing management, also decreases the difference between the r squared and adjusted r squared values. I will some anovas with different variables in the model to compare p values. 
+
+```{r}
+cca_dune3 <- cca(dune ~ A1, data = dune.env)
+RsquareAdj(cca_dune3, 1000)
+cca_dune4 <- cca(dune ~ Use, data = dune.env)
+RsquareAdj(cca_dune4, 1000)
+cca_dune5 <- cca(dune ~ Management, data = dune.env)
+RsquareAdj(cca_dune5, 1000)
+cca_dune6 <- cca(dune ~ Manure, data = dune.env)
+RsquareAdj(cca_dune6, 1000)
+cca_dune7 <- cca(dune ~ Moisture, data = dune.env)
+RsquareAdj(cca_dune7, 1000)
+```
+
+```{r}
+anova(cca_dune2, permutations = 1000)
+anova(cca_dune2, by='margin', permutations = 1000)
+
+anova(cca_dune3, permutations = 1000)
+anova(cca_dune3, by='margin', permutations = 1000)
+
+anova(cca_dune4, permutations = 1000)
+anova(cca_dune4, by='margin', permutations = 1000)
+
+anova(cca_dune5, permutations = 1000)
+anova(cca_dune5, by='margin', permutations = 1000)
+
+anova(cca_dune6, permutations = 1000)
+anova(cca_dune6, by='margin', permutations = 1000)
+
+anova(cca_dune7, permutations = 1000)
+anova(cca_dune7, by='margin', permutations = 1000)
+
+anova(cca_dune8, permutations = 1000)
+anova(cca_dune8, by='margin', permutations = 1000)
+```
+All of the models are significant. The model with the variables A1 and Management gives us the greatest F value and the greatest significance. When the variables are run individually in models, the variable moisture has the greatesy F value. Aditionally the model with moisture has the greatest adjusted r squared value.
+
+#Question 3. 
+
+Do your two analyses agree with one another or complement one another or do these two analyses seem to be suggesting different take home messages? 
+
+Both methods (NMDS and CCA) are reasonable for determining potential trends in the data. The NMDS also provides an unbiased exploratory analysis holding no expectations for the variables. However, the CCA provides much more information and reveals which variables are most important in determining species. Both models compliment one another and so both should be used. 
+
+Which analysis do you find to be more useful?
+
+The cca provides much more information and would be more useful as a scientist analyzing data
