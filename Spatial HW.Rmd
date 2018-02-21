@@ -1,0 +1,254 @@
+---
+title: "Spatial HW"
+author: "Amanda Bayless"
+date: "February 15, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(root.dir="~/Graduate Program/Applied Quantitative Methods/Assignments/Homework Spatial")
+```
+
+```{r}
+library(vegan)
+library(nlme)
+data(BCI)
+## UTM Coordinates (in metres)
+BCI_xy = data.frame(x = rep(seq(625754, 626654, by=100), each=5), 
+                    y = rep(seq(1011569,  1011969, by=100), len=50))
+```
+
+#1) Examine if there is evidence of spatial dependence in a rare and a common species in the BCI tree dataset
+plots below are just examining overall data
+```{r, results = 'hide'}
+plot(BCI_xy)
+```
+
+```{r, results = 'hide'}
+sr = apply(BCI, 1, function(x) sum(x > 0))
+hist(sr)
+```
+
+```{r, results = 'hide'}
+plot(BCI_xy, cex=sr/max(sr))
+```
+
+```{r, results = 'hide'}
+col_brks = hist(sr, plot=F)$breaks
+col_indices = as.numeric(cut(sr, col_brks))
+cols = rev(terrain.colors(length(col_brks)))
+plot(BCI_xy, cex=2, pch=19, col=cols[col_indices])
+```
+
+```{r}
+sr_dist = dist(sr)
+xy_dist = dist(BCI_xy)
+```
+
+```{r}
+max_dist = max(xy_dist) / 2
+
+# plot result
+plot(xy_dist, sr_dist)
+abline(lm(sr_dist ~ xy_dist), lwd=3, col='red')
+lines(lowess(xy_dist, sr_dist), lwd=3, col='pink')
+abline(v = max_dist, col='red', lwd=3, lty=2)
+```
+
+```{r}
+sumsp <- sapply(BCI, sum)
+boxplot(sumsp)
+median(sumsp)
+```
+
+Making cutoff halfway (25) for rare vs common species because 25 is the median.
+
+```{r, results = 'hide'}
+x = apply(BCI, 2, sum)
+ifelse(x > 25 , 'common', 'rare')
+```
+
+```{r}
+sad <- apply(BCI, 2, sum)
+plot(density(log10(sad)))
+abline(v = 1.5, col = 'red')
+abline(v = 3, col = 'red')
+```
+
+
+```{r, results = 'hide'}
+common = BCI
+for (i in 1:ncol(BCI)){
+ sp_abun = sum(BCI[,i])
+  if (sp_abun < 25)
+   common = common[,-i]
+}
+head(common)
+```
+
+```{r, results = 'hide'}
+rare = BCI
+for (i in 1:ncol(BCI)){
+ sp_abun = sum(BCI[,i])
+  if (sp_abun >= 25)
+   rare = rare[,-i]
+}
+head(rare)
+```
+
+```{r}
+sr_common = apply(common, 1, function(x) sum(x > 0))
+
+col_brks = hist(sr_common, plot=F)$breaks
+col_indices = as.numeric(cut(sr_common, col_brks))
+cols = rev(terrain.colors(length(col_brks)))
+plot(BCI_xy, cex=2, pch=19, col=cols[col_indices])
+```
+
+```{r}
+sr_rare = apply(rare, 1, function(x) sum(x > 0))
+
+col_brks = hist(sr_rare, plot=F)$breaks
+col_indices = as.numeric(cut(sr_rare, col_brks))
+cols = rev(terrain.colors(length(col_brks)))
+plot(BCI_xy, cex=2, pch=19, col=cols[col_indices])
+```
+By examining the plots there appears to be potential spatial trends in a select few species.
+
+```{r}
+sr_common = dist(common)
+xy_common = dist(BCI_xy)
+
+max_dist = max(xy_common) / 2
+
+# plot result
+plot(xy_common, sr_common)
+abline(lm(sr_common ~ xy_common), lwd=3, col='red')
+lines(lowess(xy_common, sr_common), lwd=3, col='pink')
+abline(v = max_dist, col='red', lwd=3, lty=2)
+```
+
+```{r}
+sr_rare = dist(rare)
+xy_rare = dist(BCI_xy)
+
+max_dist = max(xy_rare) / 2
+
+# plot result
+plot(xy_rare, sr_rare)
+abline(lm(sr_rare ~ xy_rare), lwd=3, col='red')
+lines(lowess(xy_rare, sr_rare), lwd=3, col='pink')
+abline(v = max_dist, col='red', lwd=3, lty=2)
+```
+
+From these plots, the rare species seem to have a spatial trend and the common species appear to have a slight spatial trend.
+
+We can confirm these observations by examining Pearson's correlation:
+
+```{r}
+sr_mantel = mantel(xy_common, sr_common)
+sr_mantel
+
+sr_mantel = mantel(xy_rare, sr_rare)
+sr_mantel
+```
+
+The rare species has a significant spatial dependence and the common species does not. 
+
+#2) Build two generalized linear models to predict the abundance of the species Drypetes standleyi using the abundance of other tree species in the study site. Specifically examine the following species as predictor variables:
+
+```{r}
+sp_ids = c("Drypetes.standleyi", "Cordia.lasiocalyx", "Hirtella.triandra",
+           "Picramnia.latifolia", "Quassia.amara",
+           "Tabernaemontana.arborea", "Trattinnickia.aspera", 
+           "Xylopia.macrantha")
+
+sp_x <- BCI[ , "Drypetes.standleyi"]
+sp_a <- BCI[ , "Cordia.lasiocalyx"]
+sp_b <- BCI[ , "Hirtella.triandra"]
+sp_c <- BCI[ , "Picramnia.latifolia"]
+sp_d <- BCI[ , "Quassia.amara"]
+sp_e <- BCI[ , "Tabernaemontana.arborea"]
+sp_f <- BCI[ , "Trattinnickia.aspera"]
+sp_g <- BCI[ , "Xylopia.macrantha"]
+
+BCI_sub = cbind(sp_x, sp_a, sp_b, sp_c, sp_d, sp_e, sp_f, sp_g, data = BCI)
+
+
+```
+ 
+#Model 1: only include a single species as a predictor variable
+
+```{r}
+lm1 <- gls(sp_x ~ sp_a, data = BCI_sub)
+lm1
+```
+
+#Model 2: include all of the species as predictor variables
+
+```{r}
+lm_allsp <- gls(sp_x ~ sp_a + sp_b + sp_c + sp_d + sp_e + sp_f + sp_g)
+```
+
+#With both models examine the spatial dependence of the residuals using the function Variogram. Model the spatial dependence in the residuals using one of the error structures available.
+
+```{r}
+plot(Variogram(lm1, form= ~ BCI_xy$x + BCI_xy$y))
+
+res = residuals(lm1)
+plot(dist(BCI_xy), dist(res))
+lines(lowess(dist(BCI_xy), dist(res)), col='red', lwd=2)
+abline(v = max_dist, col='red', lwd=3, lty=2)
+```
+
+```{r}
+plot(Variogram(lm_allsp, form = ~ BCI_xy$x + BCI_xy$y))
+
+res = residuals(lm_allsp)
+plot(dist(BCI_xy), dist(res))
+lines(lowess(dist(BCI_xy), dist(res)), col='red', lwd=2)
+abline(v = max_dist, col='red', lwd=3, lty=2)
+```
+
+```{r}
+lm_exp = update(lm_allsp, corr=corExp(form=~x + y)) #Adding exponential error 
+plot(Variogram(lm_exp, maxDist = max_dist))
+#model does not fit the error, so normalize residuals by diving residuals by the estimate of the variance-covariance matrix
+plot(Variogram(lm_exp, resType='normalized', maxDist = max_dist)) 
+```
+
+```{r}
+lm_exp_nug = update(lm_exp, corr=corExp(form=~x + y, nugget=T)) #Adding nugget 
+plot(Variogram(lm_exp_nug, maxDist = max_dist))
+plot(Variogram(lm_exp_nug, resType='n', maxDist = max_dist))
+```
+
+```{r}
+lm_rat_nug = update(lm_allsp, corr=corRatio(form=~x + y, nugget=T)) #rational quadratic error model
+plot(Variogram(lm_rat_nug, maxDist = max_dist)) # examine fit of error model to model residuals
+plot(Variogram(lm_rat_nug, resType='n', maxDist = max_dist))
+```
+
+
+#Did including the spatial error term have a large impact on the coefficients of the model?
+
+```{r}
+summary(lm_allsp)
+summary(lm_exp)
+```
+
+Including the spatial error terms did change the coefficients a lot in the model. 
+
+#Did including the spatial error terms significantly improve model fit (use function anova to carry out model comparison)?
+
+```{r}
+anova(lm1, lm_allsp, lm_exp, lm_exp_nug, lm_rat_nug, test = F)
+```
+
+Yes, including the error term significantly improved the model fit. The models with the exponential error and eponential + nugget error had the best fit and both of those error types were about equal. 
+
+#Explain why you did or did not observe a difference in the influence of adding the spatial error term between the two models.
+
+I was unable to add spatial error terms to the 1 species model. The variogram of the 1 species model and multiple species model differed by a lot. The 1 species variogram showed an influence of spatial distribution on the residuals. In other words, the 2 species may appear to be influenced by one another, but it is only due to spatial dependence. Thus, this model is not a good fit. The variogram of the model with multiple species showed less spatial dependence, but is most likely displaying less of a trend due to the decrease in residual error from having more samples. Finally, by adding in the spatial error term for the multiple species we get an even better fit, indicating that there was still some spatial dependence that should be accounted for by adding in the spatial error term. 
+
